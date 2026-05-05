@@ -42,7 +42,7 @@ jobs:
 
       - name: Build APK
         run: |
-          npx tauri android init --force 
+          npx tauri android init
           
           # Setup Proguard (Path is relative to the 'frontend' folder now)
           PROGUARD_PATH="src-tauri/gen/android/app/proguard-rules.pro"
