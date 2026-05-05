@@ -50,7 +50,7 @@ jobs:
           echo "-keep class app.tauri.** { *; }" > $PROGUARD_PATH
           echo "-keep class com.tapah.app.** { *; }" >> $PROGUARD_PATH
           
-          npx tauri android build
+          npx tauri android build --debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
