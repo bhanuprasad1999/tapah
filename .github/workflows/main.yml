@@ -7,6 +7,11 @@ env:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    # This sets the "context" to the frontend folder for all 'run' commands
+    defaults:
+      run:
+        working-directory: ./frontend 
+
     steps:
       - uses: actions/checkout@v4
 
@@ -14,7 +19,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: 'npm' # Caching speeds up subsequent runs
+          cache: 'npm'
+          # Tell the cacher where to find the package-lock.json
+          cache-dependency-path: ./frontend/package-lock.json
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -22,33 +29,33 @@ jobs:
           targets: aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, x86_64-linux-android
 
       - name: Install Android NDK
+        # We run this in the root because it's a system-level tool installation
         run: |
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653"
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
+        working-directory: . 
 
       - name: Install Dependencies and Build Frontend
         run: |
           npm install
-          # Angular build is required so Tauri has web assets to bundle
           npm run build 
 
       - name: Build APK
         run: |
-          # Ensure Android project is initialized (non-interactive)
           npx tauri android init --force 
           
-          # Proguard Setup
+          # Setup Proguard (Path is relative to the 'frontend' folder now)
           PROGUARD_PATH="src-tauri/gen/android/app/proguard-rules.pro"
           mkdir -p $(dirname "$PROGUARD_PATH")
           echo "-keep class app.tauri.** { *; }" > $PROGUARD_PATH
           echo "-keep class com.tapah.app.** { *; }" >> $PROGUARD_PATH
           
-          # Build the APK (Note: --no-dev if you want a release build)
           npx tauri android build
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: src-tauri/gen/android/**/build/outputs/apk/**/*.apk
+          # Path must point to where the files actually are relative to repo root
+          path: frontend/src-tauri/gen/android/**/build/outputs/apk/**/*.apk
           if-no-files-found: error
